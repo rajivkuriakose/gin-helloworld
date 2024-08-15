@@ -1,0 +1,100 @@
+package main
+
+import (
+	"encoding/json"
+	"net/http"
+	"os"
+
+	"github.com/gin-gonic/gin"
+)
+
+// album represents data about a record album.
+type album struct {
+    ID     string  `json:"id"`
+    Title  string  `json:"title"`
+    Artist string  `json:"artist"`
+    Price  float64 `json:"price"`
+}
+
+var albums []album
+
+func init() {
+    albums = make([]album, 0)
+    file, err := os.ReadFile("albums.json")
+    if err != nil {
+        panic(err)
+    }
+    err = json.Unmarshal(file, &albums)
+    if err != nil {
+        panic(err)
+    }
+}
+
+func main() {
+    router := gin.Default()
+    router.GET("/albums", getAlbums)
+    router.GET("/albums/:id", getAlbumByID)
+    router.POST("/albums", postAlbums)
+    router.PUT("/albums/:id", updateAlbum) // Add PUT route
+    router.DELETE("/albums/:id", deleteAlbum) // Add DELETE route
+
+    router.Run("localhost:8080")
+}
+
+func getAlbums(c *gin.Context) {
+    c.JSON(http.StatusOK, albums)
+}
+
+func getAlbumByID(c *gin.Context) {
+    id := c.Param("id")
+    for _, a := range albums {
+        if a.ID == id {
+            c.JSON(http.StatusOK, a)
+            return
+        }
+    }
+    c.JSON(http.StatusNotFound, gin.H{"message": "album not found"})
+}
+
+func postAlbums(c *gin.Context) {
+    var newAlbum album
+
+    // Bind JSON to newAlbum
+    if err := c.BindJSON(&newAlbum); err != nil {
+        return
+    }
+
+    albums = append(albums, newAlbum)
+    c.JSON(http.StatusCreated, newAlbum)
+}
+
+func deleteAlbum(c *gin.Context) {
+    id := c.Param("id")
+    for i, a := range albums {
+        if a.ID == id {
+            albums = append(albums[:i], albums[i+1:]...)
+            c.JSON(http.StatusOK, gin.H{"message": "album deleted"})
+            return
+        }
+    }
+    c.JSON(http.StatusNotFound, gin.H{"message": "album not found"})
+}
+
+func updateAlbum(c *gin.Context) {
+    id := c.Param("id")
+    var updatedAlbum album
+
+    // Bind JSON to updatedAlbum
+    if err := c.BindJSON(&updatedAlbum); err != nil {
+        return
+    }
+
+    for i, a := range albums {
+        if a.ID == id {
+            albums[i] = updatedAlbum
+            c.JSON(http.StatusOK, updatedAlbum)
+            return
+        }
+    }
+    c.JSON(http.StatusNotFound, gin.H{"message": "album not found"})
+}
