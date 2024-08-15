@@ -1,4 +1,4 @@
-module gin-hello-world
+module gin-helloworld
 
 go 1.22.5
 
